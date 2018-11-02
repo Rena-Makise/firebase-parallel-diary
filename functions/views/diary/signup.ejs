@@ -1,0 +1,140 @@
+<div id="index_02" class="row h-100 poor-story">
+    <div class="row">
+        <div class="col l4 offset-l4 m8 offset-m2 s12" style="margin-top:10vh;">
+            <div class="card c5">
+                <div class="card-content white-text">
+                    <div id="dvJoin">
+                        <h5>이메일 가입</h5>
+                        <input type="text" id="joinUserName" name="joinUserName" class="input-text" placeholder="이름">
+                        <input type="email" id="joinUserEmail" name="joinUserEmail" class="input-text" placeholder="이메일 아이디">
+                        <input type="password" id="joinPassword" name="joinPassword" class="input-text" maxlength="17" placeholder="비밀번호">
+                        <input type="password" id="joinRePassword" name="joinRePassword" class="input-text" maxlength="17" placeholder="비밀번호 확인">
+                        <div class="row">
+                            <div class="col s12 center">
+                                <button id="emailjoin" class="btn waves-effect waves-light poor-story" type="submit" name="action">
+                                    이메일으로 가입<i class="material-icons right">send</i></a>
+                                </button>
+                            </div>      
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col s12 m12 center-align">
+        </div>
+    </div>
+</div>
+<!--    FIREBASE SCRIPT     -->
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "",
+        authDomain: "",
+        databaseURL: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: ""
+    };
+    firebase.initializeApp(config);
+
+    var db = firebase.firestore();
+
+    var userName = document.getElementById('joinUserName').value.trim();
+    var email = document.getElementById('joinUserEmail').value.trim();
+    var password = document.getElementById('joinPassword').value.trim();
+    var rePassword = document.getElementById('joinRePassword').value.trim();
+
+    // 유효성 검증
+    if(validateJoinForm(email, password, rePassword)) {
+        var cbCreateUserWithEmail = function(user){
+            //프로필 업데이트 
+            firebase.auth().currentUser.updateProfile({
+                displayName: userName,
+            }).then(function() {
+                console.log('userName 업데이트 성공 : ', JSON.stringify(firebase.auth().currentUser));
+                // Database에 Users 데이터 저장
+                var userRef = db.collection('Users').doc(firebase.auth().currentUser.uid);
+                console.log('saveUserAtDB 저장');
+                userRef.set({  //데이터 저장
+                    email: firebase.auth().currentUser.email,
+                    profileImg: firebase.auth().currentUser.photoURL ? firebase.auth().currentUser.photoURL : '',
+                    userName : firebase.auth().currentUser.displayName
+                });
+                
+                console.log('이메일 가입 성공 : ', JSON.stringify(firebase.auth().currentUser));
+                
+                //인증 메일 발송
+                firebase.auth().useDeviceLanguage(); // 이메일 기기언어로 세팅
+                firebase.auth().currentUser.sendEmailVerification().then(function() {
+                    console.log('인증메일 발송 성공')
+                }).catch(function(error) {
+                    console.error('인증메일 발송 에러', error);
+                });
+                
+                alert('인증메일이 확인되지 않았습니다. 확인하신 후 로그인해주세요.');
+                location.href='login'
+            }).catch(function(error) {
+                console.error('userName 업데이트 실패 : ', error );
+
+                alert('에러가 발생했습니다. 관리자에게 문의하세요.');
+                location.href='login'
+            });
+        }
+        var cbAfterPersistence = function() {
+            return firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then(cbCreateUserWithEmail.bind(this))
+                .catch(function(error) {
+                    console.error('이메일 가입시 에러 : ', error);
+                    switch(error.code){
+                        case "auth/email-already-in-use":
+                            alert('이미 사용중인 이메일 입니다.');
+                            break;
+                        case "auth/invalid-email":
+                            alert('유효하지 않은 메일입니다');
+                            break;
+                        case "auth/operation-not-allowed":
+                            alert('이메일 가입이 중지되었습니다.');
+                            break;
+                        case "auth/weak-password":
+                            alert("비밀번호를 6자리 이상 필요합니다");
+                            break;
+                    }
+                });
+        }
+        
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
+            .then(cbAfterPersistence.bind(this))
+            .catch(function(error){
+                console.error('인증 상태 설정 중 에러 발생', error);
+            });
+    }
+
+
+
+
+
+    // 이메일 가입 폼에서 유효성 체크
+    function validateJoinForm(email, password, rePassword) {
+        //이메일 유효성 체크
+        if(!emailCheck(email)){
+            alert('이메일 형식에 맞지 않습니다.');
+            return false;
+        }
+        //패스워드 동일 여부 체크
+        if(password !== rePassword){
+            alert('패스워드가 동일하지 않습니다.');
+            return false;
+        }
+
+        return true;
+    }
+
+    // 이메일 형식체크
+    function emailCheck(mail) {
+        if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail)) {
+            return true;
+        }
+        return false;
+    }
+</script>

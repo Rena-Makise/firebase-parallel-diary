@@ -1,0 +1,101 @@
+<div id="index_02" class="row h-100 poor-story">
+    <div class="row">
+        <div class="col l4 offset-l4 m8 offset-m2 s12" style="margin-top:10vh;">
+            <div class="card c5">
+                <div class="card-content white-text">
+                    <!-- NICKNAME -->
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">account_circle</i>
+                            <input id="id" name="id" type="text" class="validate" style="color:#fff!important;">
+                            <label class="active" for="nick">이메일</label>
+                        </div>
+                    </div>
+                    <!-- PW -->
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <i class="material-icons prefix">lock</i>
+                            <input id="passwd" name="passwd" type="password" class="validate" style="color:#fff!important;">
+                            <label for="password">패스워드</label>
+                        </div>
+                    </div>
+                    <!-- SUBMIT -->
+                    <div class="row">
+                        <div class="col s12 center">
+                            <button id='loginChk' class="btn waves-effect waves-light poor-story">
+                                로그인<i class="material-icons right">send</i></a>
+                            </button>
+                        </div>      
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="col s12 m12 center-align">
+        </div>
+    </div>
+</div>
+<!--    FIREBASE SCRIPT     -->
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "",
+        authDomain: "",
+        databaseURL: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: ""
+    };
+    firebase.initializeApp(config);
+
+    document.getElementById('loginChk').addEventListener('click', function(){
+        var email = document.getElementById('id').value.trim();
+        var password = document.getElementById('passwd').value.trim();
+        if(emailCheck(email) && password.length > 0) {
+            var cbSignInEmail = function() {
+                return firebase.auth().signInWithEmailAndPassword(email, password)
+                    .then(function() {
+                        if(firebase.auth().currentUser.emailVerified) {
+                            console.log('로그인 성공');
+                            location.href='/diary/boardList';
+                        } else{
+                            alert('인증메일이 확인되지 않았습니다. 확인하신 후 로그인해주세요.');
+                            sessionStorage.clear();
+                            firebase.auth().signOut();
+                            location.href='/diary/login'
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('이메일 로그인 과정 에러', error);
+                        switch(error.code){
+                            case "auth/invalid-email":
+                                alert('유효하지 않은 메일입니다');
+                                break;
+                            case "auth/user-disabled":
+                                alert('사용이 정지된 유저 입니다.')
+                                break;
+                            case "auth/user-not-found":
+                                alert('사용자를 찾을 수 없습니다.')
+                                break;
+                            case "auth/wrong-password":
+                                alert("잘못된 패스워드 입니다.");
+                                break;
+
+                        }
+                    });
+            }
+            firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
+                .then(cbSignInEmail.bind(this));
+        } else{
+            alert('이메일이나 패스워드를 다시 체크해 주세요');
+        }
+    });
+
+    // 이메일 형식체크
+    function emailCheck(mail) {
+        if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail)) {
+            return true;
+        }
+        return false;
+    }
+</script>

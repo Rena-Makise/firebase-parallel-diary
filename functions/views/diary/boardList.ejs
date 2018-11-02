@@ -1,0 +1,150 @@
+	<!-- 일기 본체 시작 -->
+	<div class="row">
+		<div class="col s12 center">
+			<button id='coupleReq' class="btn waves-effect waves-light poor-story">
+				커플요청<i class="material-icons right">send</i></a>
+			</button>
+			<button id='logOut' class="btn waves-effect waves-light poor-story">
+				로그아웃<i class="material-icons right">send</i></a>
+			</button>
+		</div>      
+		<!-- 자신의 일기 시작 -->
+		<div class="col s6">
+		   <!-- 작성 칸 시작 -->
+		   <div class="card blue-grey darken-1">
+				<div class="card-content white-text">
+					<form name="form1" action="boardSave" method="post">
+						<table border="1" style="width:600px">
+							<caption>board sample for firebase (Cloud Firestore Beta)</caption>
+							<colgroup>
+								<col width='15%' />
+								<col width='*%' />
+							</colgroup>
+							<tbody>
+								<tr>
+									<td>작성자</td> 
+									<td><input type="text" name="brdwriter" size="20" maxlength="20" /></td> 
+								</tr>
+								<tr>
+									<td>제목</td> 
+									<td><input type="text" name="brdtitle" size="70" maxlength="250" /></td> 
+								</tr>
+								<tr>
+									<td>내용</td> 
+									<td><textarea name="brdmemo" rows="5" cols="60"></textarea></td> 
+								</tr>
+							</tbody>
+						</table>
+						<a href="#" onclick="form1.submit()">Save</a>
+						<input type="hidden" name="brdno"> 
+					</form>	
+				</div>
+			</div>
+		   <!-- 작성칸 끝 -->
+			
+			<%
+				for(let i=0; i < rows.length; i++) {
+		   %>
+			   <div class="card blue-grey darken-1">
+				   <div class="card-content white-text">
+					   <span class="card-title"><%=rows.length-i%> : <%=rows[i].brddate%></span>
+					   <p><%=rows[i].brdwriter%></p>
+					   <p><%=rows[i].brdmemo%></p>
+				   </div>
+				   <div class="card-action">
+					   <a href="boardDelete?brdno=<%=rows[i].brdno%>">삭제</a>
+					   <a href="boardForm?brdno=<%=rows[i].brdno%>">수정</a>
+				   </div>
+			   </div>
+		   <%
+				}
+		   %>
+		</div>
+		<!-- 자신의 일기 끝 -->
+		<!-- 상대편의 일기 시작 -->
+		<div class="col s6">
+		
+		</div>
+		<!-- 상대편의 일기 끝 -->
+	</div>
+	<!-- 일기 본체 끝 -->
+
+	<!--    FIREBASE SCRIPT     -->
+	<script>
+		// Initialize Firebase
+		var config = {
+			apiKey: "",
+			authDomain: "",
+			databaseURL: "",
+			projectId: "",
+			storageBucket: "",
+			messagingSenderId: ""
+		};
+		firebase.initializeApp(config);
+
+		// 인증 정보가 변화되었을 시에 변화
+		firebase.auth().onAuthStateChanged(function(user){
+			if(user){
+				console.log('user 로그인: ', JSON.stringify(user));
+			} else{
+				console.log('로그아웃');
+				sessionStorage.clear();
+				firebase.auth().signOut();
+				location.href='login';
+			}
+		})
+
+		var db = firebase.firestore();
+
+		// 메시지 설정 코드
+		var messaging = firebase.messaging();
+		messaging.requestPermission()
+			.then(function(){
+				console.log('메세징 권한 획득');
+				return messaging.getToken();
+			})
+			.then(function(token){
+				console.log('fcm token: ', token);
+				var tokenRef = db.collection('Users');
+				var query = tokenRef.where('token', '==', token).get()
+					.then(snapshot => {
+						// 이전 토큰값 유저 토큰 초기화
+						snapshot.forEach(doc => {
+							var tokenUser = db.collection('Users').doc(doc.id);
+							// tokenUser.get().then(doc => {
+							//     console.log('이런: ', doc.data());
+							//     test = doc.data()['token'];
+							//     console.log('젠장: ', test);
+							//     return test;
+							// });
+							tokenUser.update({
+								token: ""
+							});
+						});
+						// 토큰값 추가
+						var userRef = db.collection('Users').doc(firebase.auth().currentUser.uid);
+						userRef.update({
+							token: token
+						});
+						console.log('토큰값 추가 성공');
+					})
+					.catch(err => {
+						console.log('Error getting documents', err);
+					});
+			})
+			.catch(function(e){
+				console.log('메세징 권한 획득 중 에러', e);
+			});
+
+ 	   document.getElementById('coupleReq').addEventListener('click', function(){
+			location.href='/diary/coupleReq';
+		});
+
+ 	   document.getElementById('logOut').addEventListener('click', function(){
+			if(confirm('로그아웃 하시겠습니까?')){
+				sessionStorage.clear();
+				firebase.auth().signOut();
+				location.href='/';
+			}
+		});
+	</script>
